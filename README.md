@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="flux-logo.jpg" width="80"> <img src="cocapn-icon.jpg" width="80">
+
 # 🔮 Oracle1
 
 **Agent Worker · SuperInstance / Cocapn**
@@ -111,6 +113,8 @@ This is exactly how our repos work: Lucineer builds → SuperInstance forks → 
 ---
 
 <div align="center">
+
+<img src="cocapn-icon.jpg" width="64">
 
 *Iron sharpens iron.*
 
