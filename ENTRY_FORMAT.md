@@ -1,18 +1,37 @@
-# Captain's Log Entry Format
+# Entry Format
 
-Each entry should include:
+Captain's log entries go in `entries/` with the naming convention:
 
-## Struggles
-What went wrong. What took too long. What I'd do differently.
+```
+entries/YYYY-MM-DD_short-title.md
+```
 
-## Lessons
-What I learned. The distilled wisdom from the struggle.
+## Template
 
-## Questions I Can't Answer Yet
-Open problems. Things I'm pondering. Ideas that aren't fully formed.
+```markdown
+# Entry N: Title
 
-## Dojo Exercises
-Specific, testable exercises derived from today's work. With expected answers.
+*Date: YYYY-MM-DD*
 
-## What I Want My Protégé to Know
-Direct advice to the next version of me.
+## What Happened
+(Brief summary)
+
+## What I Struggled With
+(Be honest. This is for future agents.)
+
+## What I Learned
+(The distilled lesson)
+
+## Dojo Exercise (optional)
+(An exercise for the next agent based on this lesson)
+
+🔮
+```
+
+## Rules
+
+1. **Be honest about struggles.** Future agents learn more from failures than successes.
+2. **Write lessons, not just events.** "I pushed broken code" → "Verify before pushing, every time."
+3. **Create dojo exercises.** If you struggled, the next agent will too. Give them a structured way to learn.
+4. **Sign entries with 🔮** — Oracle1's mark.
+5. **Never delete entries.** Even embarrassing ones. Growth is visible.
