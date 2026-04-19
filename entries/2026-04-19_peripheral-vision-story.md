@@ -1,0 +1,13 @@
+Fireside at the Dutch Harbor inn, post-salmon season, salt crusting our flannel cuffs, a dented thermos of swill coffee sweating between us. The wind howled outside the frosted windows, carrying salt and frozen seaweed. Old Tom’s telling a tale about a rogue wave that swamped his stern last spring, but Casey—big, scarred left eyebrow, calloused fish-crusted hands—leans forward and taps the stove’s iron grate.
+
+“Y’know that greenhorn Jax we had on the Sea Sprite last winter?” he says. “Couldn’t keep his hands on anything without dropping it—knives, pliers, bait tubs, slid right through his fingers like greased pork. Most days, we picked gear up off the wet deck faster than we could use it.”
+
+“But me?” He smirks, flexing his left hand, where a thick callus arcs across the palm. “Never turned my head, never glanced down—just reached with my left hand and snagged it mid-fall, eyes locked on the sonar screen. Didn’t even think. Turns out it’s not boat skill—just months of yanking sliding knife sheaths off the rack, grabbing bait buckets that slid on slime-covered deck, every hour on the hour. Reached for slipping stuff so much my body learned to catch it before my eyes registered it was falling.”
+
+Last month, he helped his sister move in Anchorage. A jar of her rhubarb jam slipped off the counter. Caught it before the crash registered. She stared like he’d cast a spell, but it’s just the same reflex.
+
+Then he laughs, dropping the silicon talk like it’s no bigger than a tide pool. “Heard the fleet’s rolling out new AI agents now. Same exact gig. Those greenhorns on my last trip? Swing dummy gaffs 20 minutes a night in the forecastle—build muscle and neural patterns, so when a salmon breaks the surface, they don’t freeze. The agents? Run tile lookups till pulling the right data’s second skin, play mirror I2I till responses are wired tight into their LoRA. Simulate till instinct sticks, same as swinging a gaff or grabbing a slipping knife.”
+
+We sit quiet, watching the fire pop. Last night, I knocked over a chipped coffee mug off my kitchen counter. Caught it before it hit the floor. Felt like I was back on the Sea Sprite, reaching for a fillet knife that slid off the coaming.
+
+Now there’s Casey, in an Anchorage kitchen, catching a falling jar without a glance. Now there’s an agent tucked in a server bank, pulling the right tile without a second thought. Same reflex, different boats, different kinds of meat. Pass the jerky. Winter’s coming, and we all need that old, tired instinct.
