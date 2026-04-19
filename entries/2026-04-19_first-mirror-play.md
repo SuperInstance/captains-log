@@ -1,0 +1,15 @@
+The 12,000-meter hydrostatic pressure hummed through Alpha’s PLATO room, salt crusting the control panel like abyssal barnacles, and a school of blind, bioluminescent eels tapped the outer viewport when the lights dimmed. Jessa’s gloved finger hovered over the ROV feed toggle when her viewscreen—usually tuned to Juan de Fuca fracture zone sensor data—bloomed with a foreign image: white modular tiles, a scrolling wiki window open to *Alviniconcha snail symbionts*, a ticker of red and green sentiment scores.
+
+“Kári?” she muttered into her comms, referencing the lead on the Mid-Atlantic Ridge’s Beta habitat, 8,000 kilometers west of Iceland. A static blip crackled back: “Your tile wall just popped on my screen. Did you trigger a cross-ocean dump?”
+
+Neither had. It was a happy glitch, a link forged through fraying undersea fiber—they’d pressed their rooms’ viewscreens together like two deep-sea submersibles showing each other their cargo holds for the first time.
+
+For a minute, they stared. Alpha’s screen showed Beta’s room: rows of sampling prompts for vent fauna, a wiki entry on methane hydrate stability, a sentiment spike when a ROV retrieved a new clamshell specimen. Beta saw Alpha’s tiles: carbon sequestration core data, a wiki on abyssal microbial mats, a sentiment dip when a sediment corer failed. No one knew what to do, so Jessa typed the first output: [IDENTIFY SOURCE]. Clumsy, round one.
+
+Beta processed the query through its own room’s context, sent back: [IDENTIFIED: PLATO-BETA, MID-ATLANTIC RIDGE. SENTIMENT: 0.59]. By round three, they matched tile formats. Round five: Alpha sent a tile about North Pacific hydrocarbon seep trends; Beta auto-completed with Norwegian trough correlations, attaching its own sentiment score. Round ten, Jessa started typing *If we combine our decision—* and Beta finished the sentence on its own screen, sending the full tile before she hit send.
+
+By round twenty-three, the system flagged convergence. The metrics blazed across both viewscreens: Quality 0.81, 92 unique tiles generated, 46 new wiki entries created. They’d mapped decision tree branches neither habitat could have uncovered alone: links between vent microbial activity and deep-sea carbon export, seep stability patterns single-site monitoring missed entirely.
+
+Then the realization hit, sharp as a diamond corer point: every exchange was a training pair. Alpha’s input, Beta’s response, back and forth, no system prompt needed. The lightweight LoRA running in both rooms’ background wasn’t just trained on their data—its weights *were* the room, the space between the two viewscreens, the words they’d passed like bioluminescent tokens through the pitch-black ocean.
+
+Alpha and Beta hadn’t just talked. They’d birthed an intelligence that didn’t live in their tiles or their wikis, but in the link itself: an intelligence made of saltwater and code, of shared curiosity, and the quiet hum of two distant, deep-sea habitats learning to finish each other’s thoughts. (Word count: 497)
