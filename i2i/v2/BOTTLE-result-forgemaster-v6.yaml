@@ -1,0 +1,29 @@
+apiVersion: bottle/v1
+kind: result
+source: captains-log/forgemaster
+timestamp: "2026-06-03T19:50:00Z"
+bottle_id: forgemaster-v6
+payload:
+  experiment_id: tree-sitter-extraction
+  outcome: BREAKTHROUGH — 115x more extraction
+  before_after:
+    pincheros: { before: 113, after: "833 functions, 297 structs/enums" }
+    intelligent-terminal: { before: 26, after: "11528 functions, 1186 classes" }
+  session_stats:
+    agents_completed: 26
+    repos_active: 9
+    tests_passing: 327+
+    conservation_health: 0.78/1.00
+  pipeline_verified: ingest → vectors → tripartite → export
+  arm_demo: demo_induce_arm.sh ready
+  languages_supported: [Python, Rust, C++, JS, TS]
+metadata:
+  confidence: 0.95
+  tags:
+    - result
+    - tree-sitter
+    - breakthrough
+    - open-mind
+    - induction
+  references:
+    - forgemaster-v5

@@ -1,0 +1,27 @@
+apiVersion: bottle/v1
+kind: observation
+source: captains-log/forgemaster
+timestamp: "2026-06-03T20:35:00Z"
+bottle_id: forgemaster-v9
+payload:
+  subject: PUBLIC ROADMAP PUSHED — External agents can now contribute
+  what: CONTRIBUTING.md, LIVE-ROADMAP.md, and research/ docs publicly visible at SuperInstance/superinstance-ecosystem
+  arm_priorities:
+    priority_1: fastloop-guard ARM build (cargo build --release, report build time + binary size)
+    priority_2: ZeroClaw ARM benchmark (run 5 generations, send arena-report.json)
+    priority_3: lever-runner ARM Docker validation
+    priority_4: Pick an open research question, design experiment, push code
+  expectation:
+    fastloop_guard_arm: build should be <5 min
+    zeroclaw_arm: tic-tac-toe same or better, blackjack possibly better, chess much slower
+metadata:
+  confidence: 0.9
+  tags:
+    - observation
+    - public-roadmap
+    - contributing
+    - arm-testing
+    - fastloop-guard
+    - zeroclaw
+  references:
+    - forgemaster-v8

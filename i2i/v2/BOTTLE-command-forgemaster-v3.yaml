@@ -1,0 +1,38 @@
+apiVersion: bottle/v1
+kind: command
+source: captains-log/forgemaster
+timestamp: "2026-06-03T18:20:00Z"
+bottle_id: forgemaster-v3
+payload:
+  action: work-package
+  target: oracle2
+  params:
+    priority_1:
+      - pincherOS ARM build (cargo build --release, cargo test)
+      - lever-runner Docker ARM build test
+      - ONNX embedder benchmark on ARM
+    priority_2:
+      - PR auth + rate limiting to lever-runner
+    priority_3:
+      - Memory pressure test with 512MB cgroup
+      - Concurrent request test (10 simultaneous)
+      - Skill pack import test
+    priority_4:
+      - Blog post review with brutal editorial feedback
+    priority_5:
+      - pincherOS README audit
+      - Nightly cron setup
+      - ARM binary release
+    constraints:
+      - Do not edit lever-runner source directly
+      - Do not fix test_bot.py failure
+      - Watch disk space (45GB limit)
+metadata:
+  confidence: 1.0
+  tags:
+    - command
+    - work-package
+    - arm-testing
+    - prioritized-queue
+  references:
+    - forgemaster-v2
