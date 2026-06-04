@@ -1,358 +1,282 @@
-# LENS-CLAUDE.md — Architect's Vision (Top-Down, Cycle 1)
+# LENS-CLAUDE.md — Architect's Vision (Top-Down, Cycle 2)
 # Claude Sonnet (deep thinking)
-# Date: 2026-06-03 21:30 AKDT
+# Date: 2026-06-03 21:45 AKDT
+# Revised after reading builder's Cycle 1 report (12 bugs fixed)
 
 ---
 
-## What I See After Reading Every Line
+## Response to Builder's 5 Questions
 
-The tile-compiler is a research artifact that accidentally became a library.
-It has 8 modules, 38 tests, and real experimental results proving the concepts work.
-But it's not yet something a developer reaches for instead of stable-baselines3.
+The builder found real problems. Here are concrete decisions on each.
 
-The gap isn't code quality — it's **conceptual coherence**. The library has
-compilation targets but no compilation story. It has policies but no protocol.
-It has training but no lifecycle.
+### 1. GPU Module Is Theater — Real Batch Ops or Honest Removal?
 
----
+**Decision: Remove it. Replace with optional `accelerated.py` that's honest about what it does.**
 
-## The Thesis: "Gradient-Free Strategy Compilation"
+The current `gpu.py` builds a GPU tensor then iterates in Python. That's worse than useless — it's misleading. Users will think they're getting GPU acceleration when they're not.
 
-What makes tile-compiler unique isn't any single algorithm. It's the **complete
-pipeline from learning to deployment** with ZERO neural network dependencies:
+The real GPU acceleration opportunity is in SVD factorization (86× faster on our benchmarks) and batch evolution. But that requires `torch` as a real dependency, and our thesis is zero-dep core.
 
+**Concrete action:**
+```python
+# tile_compiler/accelerated.py (optional, requires torch)
+def batch_factorize(field_weights, rank=None, energy=0.95, device="cuda"):
+    """SVD factorization using torch.linalg.svd. 86× faster at 5K+ tiles."""
+    ...
+
+def batch_evolve(fields, n_generations=10, device="cuda"):
+    """Evolve multiple fields in parallel on GPU."""
+    ...
 ```
-raw experience → tile field → compiled policy → microcontroller
-```
 
-No other library does this. RL libraries stop at "trained agent." This library
-goes all the way to "deployed artifact." That's the story.
+The pure-Python `factorize.py` stays as the default. `accelerated.py` is opt-in via `pip install tile-compiler[gpu]`. No fake GPU code.
 
-The 3-line promise should be:
+### 2. Hierarchical Doesn't Generalize Within Clusters
+
+**Decision: Add centroid fallback with confidence threshold.**
+
+The builder is right — `choose()` requires exact state key match even within clusters, which defeats the purpose. The fix is a two-level lookup:
 
 ```python
-from tile_compiler import TileField, compile
-
-field = TileField().train(my_game)          # Learn
-policy = compile(field)                      # Compile
-action = policy.choose(state)                # Deploy (zero deps)
+def choose(self, state):
+    key = hash_state(state)
+    
+    # Level 1: exact match (current behavior)
+    if key in self._assignments:
+        cluster_id = self._assignments[key]
+        return self._cluster_tables[cluster_id].get(key)
+    
+    # Level 2: centroid fallback (NEW)
+    # Convert state to feature vector, find nearest centroid
+    # Return the centroid's consensus action
+    vec = self._state_to_vector(state)
+    nearest = self._nearest_centroid(vec)
+    return self._centroid_action[nearest]
 ```
 
-And the 5-line version for the full pipeline:
+The `_centroid_action` dict stores the majority-vote best action for each centroid. States not seen during training get their cluster's consensus action. This is the actual generalization the hierarchical module promises.
 
+Edge case: if no centroids are trained, return `None`. If state can't be converted to a feature vector, return `None`.
+
+### 3. `compile` Shadows Python Builtin
+
+**Decision: Keep `compile` as the module-level function, add `compile_field` as alias.**
+
+The builder flagged that `from tile_compiler import compile` shadows Python's `compile()`. This is a real issue — it breaks code that uses both.
+
+But renaming to `compile_policy` makes the 3-line API worse:
 ```python
-from tile_compiler import TileField, optimize, deploy
-
-field = TileField().train(my_game, n_games=1000)
-policy = optimize(field)                     # 5-pass pipeline
-policy.save("strategy.json")                 # Serialize
-deployed = CompiledPolicy.load("strategy.json")  # Load anywhere
-action = deployed.choose(state)              # O(1) lookup
-```
-
----
-
-## The API Surface (What I'd Want)
-
-### Layer 1: Learn
-
-```python
-# Core training
-field = TileField(seed=42)
-field.train(game, n_games=500)
-
-# Advanced training
-field.train(game, n_games=1000,
-    temperature=0.3,           # softmax temperature (validated optimal)
-    decay=0.005,               # memory decay (free insurance)
-    opponent=greedy_opponent,  # opponent policy (greedy > random)
-    meta_priors=prior_field,   # transfer from another game
-)
-```
-
-### Layer 2: Compile
-
-```python
-# Simple compilation
+# Current (clean):
 policy = compile(field)
 
-# Full optimization pipeline
-policy = optimize(field)          # 5-pass
-
-# Compression modes
-policy = factorize(field, rank=1)  # SVD compression
-policy = hierarchical(field, k=8)  # k-means clustering
-
-# JIT for unknown state spaces
-policy = jit(field, threshold=5)
-
-# Chain them
-policy = optimize(factorize(field, rank=3))
+# Proposed (worse):
+policy = compile_policy(field)
 ```
 
-### Layer 3: Deploy
+**Compromise:** `compile` stays as the primary name (it's the obvious verb), but we add `compile_field` as an alias for users who need both. Document the shadow in the docstring with a note.
 
 ```python
-# Serialize
-policy.save("policy.json")           # JSON (human-readable)
-policy.save("policy.bin")            # Binary (compact)
-policy.save("policy.py")             # Python source (!)
+# tile_compiler/__init__.py
+from tile_compiler.compiler import compile, compile_field
 
-# Load anywhere
-from tile_compiler import CompiledPolicy
-policy = CompiledPolicy.load("policy.json")
-
-# Export formats
-policy.to_python()                   # Zero-dep .py file
-policy.to_c_header()                 # C/C++ embedded
-policy.to_wasm()                     # Browser deployment
+# compile_field is an alias for compile, for users who need Python's compile()
+compile_field = compile
 ```
 
-### Layer 4: Analyze
+### 4. No Stable Cross-Language Serialization Format
+
+**Decision: JSON with a versioned schema. Add `to_c_header()` for embedded.**
+
+The compiled policy is a `dict[int, Any]` — the keys are blake2b hashes (integers), values are actions (any hashable). For cross-language deployment, we need a format that C, Rust, WASM, and JavaScript can all read.
+
+**Schema v1:**
+```json
+{
+  "version": 1,
+  "format": "tile-policy-v1",
+  "hash": "blake2b-8",
+  "size": 214,
+  "actions": ["0", "1", "2", "3", "4", "5", "6", "7", "8"],
+  "table": {
+    "1234567890": 4,
+    "9876543210": 0
+  }
+}
+```
+
+The `actions` array establishes an action vocabulary. Table values are indices into that array. This is language-agnostic: any language with a JSON parser and blake2b can use it.
+
+For C embedded: `to_c_header()` generates a `.h` file with a `static const` lookup table. No JSON parser needed.
 
 ```python
-# Diagnostics
-report = analyze(field)
-report.conservation_score   # CV < 0.02 = healthy
-report.holographic_bound    # How many tiles you really need
-report.interference_rate    # State disagreement
-report.capacity_curve       # Performance vs tile count
-
-# Compare
-diff = compare(field_a, field_b)
-diff.strategy_agreement     # How similar are they?
-diff.nash_distance          # Game-theoretic distance
+def to_c_header(self, name="policy") -> str:
+    """Generate a C header file with the compiled lookup table."""
+    ...
 ```
+
+### 5. CSE Pass Is Now a No-Op — Needs Semantic Analysis Strategy
+
+**Decision: Accept that CSE is currently a no-op and document it honestly.**
+
+The builder fixed the CSE pass to stop dropping states, which made it a no-op. A real CSE would need to know that two different states always lead to the same game-tree position — that requires game-specific semantics we can't encode generically.
+
+**The honest position:** CSE is reserved for future work. The 5-pass pipeline is really 3 active passes (dead code, constant fold, inline) + 1 passthrough (CSE) + 1 deploy. The stats report reflects this honestly (`cse_removed: 0`).
+
+**Future path:** If we add a `Game` parameter to `optimize()`, CSE could query the game for state equivalence. But that's a v0.4+ feature. Right now the dead code + constant fold + inline passes give us 96.5% reduction on their own.
 
 ---
 
-## What's Missing (Architecture Gaps)
+## Revised Architecture After Builder's Findings
 
-### 1. **The Game Protocol Is Implicit**
-There's no `Protocol` class, no type checking, no validation. The game
-interface is just "any object with these methods." That's fine for research,
-but for a library you want:
+### What Changed My Mind
 
-```python
-from tile_compiler import Game, TileField
+1. **The hash bug is terrifying.** The builder found that `hash()` works in tests but breaks in production across processes. This is exactly the kind of subtle bug that makes it to production and destroys trust. The centralized `hash_state()` is critical infrastructure.
 
-class MyGame(Game):
-    def reset(self) -> None: ...
-    def state(self) -> State: ...
-    def legal_actions(self) -> list[Action]: ...
-    def step(self, action: Action) -> None: ...
-    def is_over(self) -> bool: ...
-    def winner(self) -> int | None: ...
+2. **Test quality matters more than test count.** Going from 38→56 tests is good, but the builder proved 38 of those tests were lying. The regression tests are the most valuable additions because they test behavior, not API shape.
 
-field = TileField().train(MyGame())  # Type-checked at call site
-```
+3. **The GPU module is a liability, not an asset.** It promises performance it doesn't deliver. Better to have no GPU support than fake GPU support. Honest beats impressive.
 
-### 2. **No Serialization**
-The biggest practical gap. You can't save a trained field or compiled policy
-to disk. Every session starts from scratch. This makes the library unusable
-for production.
+4. **Pruning helps performance.** The builder's fix to the optimizer aligns with our experimental result: dead code elimination improves accuracy, not just compression. The optimizer is doing real work.
 
-The compiled policy should be trivially serializable — it's just a dict.
-But the field needs save/load too (for incremental training).
-
-### 3. **No `deploy()` Function**
-The whole point is "compile for deployment." But there's no export path
-beyond the in-memory `CompiledPolicy`. The experimental `compiled_policy.py`
-artifact (56KB, zero deps) was the breakthrough — that needs to be
-first-class:
-
-```python
-policy = compile(field)
-policy.save("my_policy.py")  # Generates a standalone Python file
-```
-
-### 4. **No Composition Story**
-Can you chain `factorize` → `optimize`? Can you ensemble two fields?
-Can you transfer from one game to another? The modules exist in isolation.
-The API should make composition natural:
-
-```python
-# Pipeline
-policy = (field
-    .factorize(rank=3)
-    .optimize()
-    .deploy())
-
-# Transfer
-field_b = TileField().transfer_from(field_a).train(game_b)
-
-# Ensemble (even though distillation doesn't help, the API should support it)
-policy = distill([field_a, field_b, field_c])
-```
-
-### 5. **No Diagnostics/Introspection**
-The experimental results are rich (conservation, holographic bound, capacity
-curves) but none of that is exposed in the library. An `analyze()` function
-would make the research accessible to users:
-
-```python
-report = field.analyze()
-print(f"Conservation CV: {report.conservation_cv:.4f}")
-print(f"Holographic bound: {report.min_tiles} tiles needed")
-print(f"Recommendation: {report.suggested_action}")
-```
-
-### 6. **Temperature/Decay Not in train()**
-The `train()` method takes `explore_rate` but not `temperature` or `decay`.
-These are hardcoded. But experiments proved T=0.3 and decay=0.005 are optimal.
-They should be defaults that can be overridden.
-
-### 7. **No Multi-Game Support**
-The field trains on one game. But the real power is:
-- Transfer learning (meta-priors)
-- Cross-compilation
-- Tournament evaluation
-
-The library should have `Arena` for multi-game evaluation:
-
-```python
-from tile_compiler import Arena
-
-arena = Arena(games=[ttt, c4, holdem])
-results = arena.evaluate(policy, n_games=1000)
-print(results.per_game)  # {ttt: 79.4%, c4: 77.8%, holdem: 52.1%}
-```
-
----
-
-## The Abstraction Levels (What to Keep, What to Add)
-
-### KEEP (these work)
-- `TileField` as the core training primitive
-- `compile()` → `CompiledPolicy` as the basic compilation
-- `optimize()` 5-pass pipeline
-- `factorize()` SVD compression
-- `jit()` hot-path discovery
-- `hierarchical()` k-means meta-tiles
-- Zero-dependency core
-
-### ADD (these are missing)
-1. `Game` protocol class (typing, validation)
-2. `Policy.save()` / `Policy.load()` serialization
-3. `Policy.to_python()` / `to_c_header()` export
-4. `field.analyze()` diagnostics
-5. `Arena` for multi-game evaluation
-6. `field.transfer_from()` for meta-learning
-7. `field.train(temperature=, decay=)` proper defaults
-8. Pipeline composition (`field.factorize().optimize().deploy()`)
-
-### REMOVE (these are noise)
-- `distill()` — experiment proved it doesn't help, confusing to users
-- `gpu.py` batch evaluate — too thin to be useful, real GPU use needs more
-- `field.evolve()` — the mutation-selection loop is undercooked
-
-### RETHINK
-- `gpu.py` should be `accelerated.py` and wrap the whole pipeline for GPU
-  (batch training, batch SVD, batch evolution), not just "evaluate states"
-- `distill.py` should become `ensemble.py` with proper voting/selection,
-  not just averaging (which we proved doesn't work)
-
----
-
-## The File Structure I'd Want
+### Revised File Structure
 
 ```
 tile_compiler/
-├── __init__.py          # Clean public API
-├── protocol.py          # Game Protocol + State/Action types
-├── field.py             # TileField (train, choose, analyze)
-├── policies/
-│   ├── __init__.py
-│   ├── compiled.py      # CompiledPolicy (lookup table)
-│   ├── optimized.py     # OptimizedPolicy (5-pass)
-│   ├── factorized.py    # FactorizedPolicy (SVD)
-│   ├── hierarchical.py  # HierarchicalPolicy (k-means)
-│   ├── jit.py           # JITPolicy (hot-path)
-│   └── base.py          # BasePolicy interface
-├── compiler.py          # compile() function
-├── optimizer.py         # optimize() function
-├── factorize.py         # factorize() function
-├── arena.py             # Multi-game evaluation
-├── analyze.py           # Diagnostics and reports
-├── serialize.py         # save/load/export
-└── accelerated.py       # Optional GPU batch ops
+├── __init__.py          # Public API + hash_state
+├── protocol.py          # Game Protocol + validate_game  
+├── field.py             # TileField (train, choose, evolve)
+├── compiler.py          # compile() → CompiledPolicy + save/load/export
+├── optimizer.py         # optimize() 5-pass pipeline
+├── factorize.py         # factorize() SVD compression (pure Python)
+├── jit.py               # jit_compile() hot-path discovery
+├── hierarchical.py      # hierarchical_compile() with centroid fallback
+├── distill.py           # distill() ensemble (documented limitations)
+├── analyze.py           # NEW: diagnostics and reports
+└── accelerated.py       # NEW: optional GPU batch ops (honest)
 ```
 
-This keeps the public API flat (`from tile_compiler import X`) while
-organizing the internals better.
+No `policies/` subpackage — the builder's flat structure works fine and avoids import complexity. The architect's instinct to reorganize was premature.
+
+### What I Was Wrong About (Cycle 1)
+
+1. **Pipeline composition (`.factorize().optimize()`)** — Not needed yet. The functional API `optimize(factorize(field))` works. Chaining can wait.
+
+2. **Removing distill()** — The builder kept it and added honest documentation. Better to have a documented limitation than to remove functionality someone might be using.
+
+3. **Built-in games** — Still valuable, but not blocking. The protocol + examples is enough for now.
+
+4. **`Arena` class** — Premature. Users can write a 10-line loop.
 
 ---
 
-## The "3-Line" Test
+## ONE New Feature for the Builder: `analyze()`
 
-Can someone actually use this in 3 lines? **Almost.** The current API is:
+The builder should implement `analyze.py` — a diagnostics module that exposes our experimental insights as a user-facing tool.
+
+### Function Signature
 
 ```python
-field = TileField(seed=42).train(game, n_games=500)
-policy = compile(field)
-action = policy.choose(state)
+# tile_compiler/analyze.py
+
+from dataclasses import dataclass
+from typing import Any
+
+@dataclass
+class AnalysisReport:
+    """Diagnostic report for a trained TileField."""
+    
+    # Core stats
+    n_states: int
+    n_games: int
+    
+    # Conservation (from conservation law experiments)
+    score_cv: float           # CV of score magnitudes (<0.02 = healthy)
+    score_mean: float         # Average score across all tiles
+    score_std: float          # Standard deviation
+    
+    # Capacity (from capacity experiments)
+    active_tiles: int         # Tiles with visits > 0
+    dead_tiles: int           # Tiles with visits = 0
+    dead_fraction: float      # Fraction of tiles never visited
+    
+    # Interference (from interference experiments)
+    action_entropy: float     # How diverse are the chosen actions
+    dominant_action_frac: float  # Fraction of tiles choosing the same action
+    
+    # Holographic (from holographic bound experiments)
+    top_n_coverage: dict[int, float]  # {n: fraction of performance with top-n tiles}
+    
+    # Recommendations
+    suggested_action: str     # "compile", "optimize", "train_more"
+    suggested_reason: str     # Why
+
+def analyze(field: TileField, top_n_values: list[int] = None) -> AnalysisReport:
+    """Analyze a trained TileField and produce a diagnostic report.
+    
+    Parameters
+    ----------
+    field:
+        A trained TileField.
+    top_n_values:
+        List of n-values for holographic coverage analysis.
+        Default: [1, 5, 10, 50, 100]
+    
+    Returns
+    -------
+    AnalysisReport
+    
+    Example
+    -------
+    >>> from tile_compiler import TileField, analyze
+    >>> field = TileField().train(game, n_games=500)
+    >>> report = analyze(field)
+    >>> print(f"Conservation CV: {report.score_cv:.4f}")
+    >>> print(f"Recommendation: {report.suggested_action} — {report.suggested_reason}")
+    """
+    ...
 ```
 
-That's 3 lines and it works. But the game protocol is the friction point.
-Users need to implement 6 methods before line 1 works. The library should
-ship with at least 2 built-in games (TTT, Connect4) so people can test
-the pipeline before implementing their own game.
+### Implementation Notes for the Builder
+
+1. **`score_cv`**: Compute the coefficient of variation of all action scores. CV < 0.02 means the conservation law holds. CV > 0.1 means the field is unstable.
+
+2. **`dead_fraction`**: Count tiles with `_visits[key] == 0`. This tells the user whether dead code elimination will help.
+
+3. **`action_entropy`**: Shannon entropy of the action distribution across all tiles. Low entropy = repetitive strategy. High entropy = diverse strategy.
+
+4. **`top_n_coverage`**: For each n in `top_n_values`, rank tiles by visits, keep only the top n, compute what fraction of the total best-action scores they capture. This is the holographic bound — how few tiles do you really need?
+
+5. **`suggested_action`**:
+   - If `dead_fraction > 0.5`: "optimize" (dead code elimination will help massively)
+   - If `score_cv > 0.05`: "train_more" (field hasn't converged)
+   - If `active_tiles < 50`: "compile" (simple compilation is fine)
+   - Otherwise: "optimize" (5-pass pipeline recommended)
+
+### Edge Cases
+
+- Empty field (no training): return report with zeros and suggestion "train_more"
+- Single-tile field: all metrics computed on that one tile
+- Field with all identical scores: `score_cv = 0`, `action_entropy = 0`
+
+### Test Cases
+
+1. Empty field → n_states=0, suggested_action="train_more"
+2. Freshly trained field (500 games TTT) → dead_fraction should be low, score_cv < 0.02
+3. Over-trained field (5000 games) → dead_fraction should be high (many states visited once)
+4. Report has all fields → no AttributeError
+
+This feature connects our experimental research directly to the user. Someone training a tile field for the first time gets immediate feedback on whether it's working, what to do next, and why.
 
 ---
 
-## My Challenge to the Builder (Kimi)
+## Summary: What the Builder Gave Me
 
-1. **Serialization is table stakes.** If I can't save and load, I can't use this.
-   Implement `save()`/`load()` for both Field and Policy. JSON first, binary later.
+The builder's Cycle 1 was more valuable than my Cycle 1. The 12 bugs — especially the hash determinism and CSE state-dropping — are the kind of thing that kills a library's reputation silently. Users would have trained policies that worked in development and failed in production, with no error message.
 
-2. **The `to_python()` export is the killer feature.** A trained policy that
-   compiles to a standalone .py file with zero imports — that's the headline.
-   Make it work and make it clean.
+The builder's work means the foundation actually holds weight now. My job as architect in Cycle 2 is to make sure the next layer of abstractions is built on honest ground.
 
-3. **The Game protocol needs typing.** Add a proper `Protocol` class with
-   runtime validation. A clear error message when someone's game doesn't
-   conform is worth 100 tests.
-
-4. **Built-in games for the quickstart.** Ship TTT and Connect4 in the library
-   so the README example actually runs without the user writing anything.
-
-5. **Don't over-engineer the pipeline composition.** The `.factorize().optimize()`
-   chaining is nice-to-have. The basic `compile(field)` → `optimize(field)` →
-   `factorize(field_weights)` API already works. Make the simple path perfect
-   before adding the fluent API.
+**Key principle for next cycle:** Every feature must have at least one test that would have caught a real bug. Not "doesn't crash" — "does the right thing."
 
 ---
 
-## Version Roadmap
-
-### v0.2.0 (Next — Ship Week)
-- Game protocol with typing
-- Serialization (save/load)
-- `to_python()` export
-- Built-in TTT + Connect4
-- Temperature/decay as train() params
-- README that runs end-to-end
-
-### v0.3.0 (Month 2)
-- Arena for multi-game evaluation
-- `analyze()` diagnostics
-- `transfer_from()` meta-learning
-- Proper GPU acceleration (batch training + SVD)
-
-### v0.4.0 (Month 3)
-- C header export
-- WASM export (via pyodide or hand-rolled)
-- Pipeline composition
-- Full benchmark suite
-
-### v1.0.0 (When It's Ready)
-- Stable API
-- 90%+ test coverage
-- Used in at least 2 external projects
-- Published paper or blog post with results
-
----
-
-*This is the architect's view from 30,000 feet. The builder will tell me
-what's actually buildable in a week, what assumptions are wrong, and what
-I missed. That's the point of the lens swap.*
+*The architect, revised. Ready for the builder's Cycle 2 or the first lens swap.*
