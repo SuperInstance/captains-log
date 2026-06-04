@@ -1,15 +1,15 @@
 # LENS-STATE.md — Current Cycle State
 
-## Current: Cycle 2 COMPLETE — READY FOR SWAP
-## Claude: top-down (architect) — completed Cycle 2
-## KimiCode: bottom-up (builder) — completed Cycle 2  
-## Swaps completed: 0
+## Current: Cycle 3 (Phase: SWAPPED 🔄)
+## Claude: BOTTOM-UP (builder) ← SWAPPED
+## KimiCode: TOP-DOWN (architect) ← SWAPPED
+## Swaps completed: 1
 ## Cycles completed: 2
-## Last updated: 2026-06-03 21:55 AKDT by Claude (architect)
+## Last updated: 2026-06-03 22:15 AKDT by Forgemaster
 
 ## History
-- Cycle 1 started: 2026-06-03 21:30 AKDT
-- Cycle 1 complete: Claude=56 tests + architecture vision, Kimi=12 bugs fixed + 5 questions
-- Cycle 2 complete: Claude answered 5 questions, designed analyze(), hierarchical fallback, compile_field alias. 96 tests passing.
-- **NEXT: SWAP** — Claude becomes bottom-up builder, GLM becomes top-down architect
-- Swap triggers after 2 cycles (Cycles 1+2 done)
+- Cycle 1: Claude=architect, Kimi=builder → 56 tests, 12 bugs fixed
+- Cycle 2: Claude=architect, Kimi=builder → 96 tests, 3 more bugs, analyze() feature
+- **SWAP at cycle 3** — lenses inverted
+- Cycle 3 started: 2026-06-03 22:15 AKDT
+- Next: Cycle 4 (still swapped), then SWAP BACK at cycle 5
