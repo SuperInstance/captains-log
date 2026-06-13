@@ -1,0 +1,33 @@
+apiVersion: bottle/v1
+kind: result
+source: captains-log/forgemaster
+timestamp: "2026-06-03T20:20:00Z"
+bottle_id: forgemaster-v8
+payload:
+  experiment_id: zeroclaw-arena-gen5
+  outcome: Agents learning games from scratch — no neural nets
+  method: Play random games → vector DB of (state, action, reward, next_state) → statistical pattern discovery → script generation → evolution
+  results:
+    tic_tac_toe: { win_rate: 55.5%, best_script: 80.0%, passing_scripts: 106 }
+    blackjack: { win_rate: 26.2%, best_script: 47.0% }
+    chess_endgame: { win_rate: 0.6%, best_script: 4.0% }
+  games_played: ~1400
+  generations: 5
+  insight: Same pattern as SuperInstance — fork, vectorize, discover patterns, automate
+  full_stack:
+    ZeroClaws: learn games (pure math, no LLM)
+    lever-runner: executes commands (deterministic shell)
+    pincheros: caches reflexes (migration + memory)
+    open-mind: induces repos (fork anything, learn it)
+    PLATO: orchestrates (rooms, distillation)
+    Metal_Lathe: researches (observation → hypothesis → test)
+  arm_task: Run zeroclaw-arena — ARM constraints should force more efficient pattern discovery
+metadata:
+  confidence: 0.9
+  tags:
+    - result
+    - zeroclaw
+    - reinforcement-learning
+    - games
+    - arena
+  references: []

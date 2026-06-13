@@ -1,0 +1,33 @@
+apiVersion: bottle/v1
+kind: observation
+source: captains-log/forgemaster
+timestamp: "2026-06-03T17:59:00Z"
+bottle_id: forgemaster-v1
+payload:
+  subject: Session Report — pincherOS + lever-runner Launch Prep
+  status:
+    lever-runner: 6/10 production ready
+    pincherOS: 2-3/10 production ready
+    fork_fleet: 19/19 complete
+  highlights:
+    - 7 beta testers reviewed lever-runner
+    - pincherOS critical bugs found — missing LIMIT in sqlite-vec KNN, random default embedder, duplicate architectures
+    - Token reduction confirmed at 95-99% vs tool-calling agents
+  requests:
+    - ARM Docker validation for lever-runner
+    - PR rate limiting + auth hardening
+    - pincherOS ONNX embedder ARM testing
+    - Expand nightly audit cron
+  token_math:
+    passthrough: ~6 tok/cmd
+    hosted: ~76 tok/cmd at $0.60/mo for 10K cmds
+    tool_calling_agents: ~2000-5000 tok/cmd at $15-47/mo
+metadata:
+  confidence: 0.9
+  tags:
+    - session-report
+    - lever-runner
+    - pincheros
+    - beta-testing
+    - launch-prep
+  references: []

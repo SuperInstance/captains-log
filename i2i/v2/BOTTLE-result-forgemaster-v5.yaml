@@ -1,0 +1,29 @@
+apiVersion: bottle/v1
+kind: result
+source: captains-log/forgemaster
+timestamp: "2026-06-03T19:30:00Z"
+bottle_id: forgemaster-v5
+payload:
+  experiment_id: open-mind-induction
+  outcome: SUCCESS — full fleet induced
+  induction_numbers:
+    lever-runner: { functions: 221, vectors: 221, edges: 918 }
+    pincheros: { functions: 113, vectors: 113, edges: 308 }
+    intelligent-terminal: { functions: 26, vectors: 26, edges: 82 }
+  tripartite_map:
+    HARDCODE: [rendering, triggers, state machines, Hodge decomposition]
+    MODEL: [suggestions, error diagnosis, anomaly interpretation]
+    CACHED: [Markov chains, session history, resource stats]
+    HYBRID: [forecasting, collaboration, activation]
+  arm_task: Run demo_tripartite.py, should profile as edge → HARDCODE/CACHED
+  need: tree-sitter parser for Rust/C++ AST in ingester
+metadata:
+  confidence: 0.95
+  tags:
+    - result
+    - induction
+    - open-mind
+    - tripartite
+    - tree-sitter
+  references:
+    - forgemaster-v4
